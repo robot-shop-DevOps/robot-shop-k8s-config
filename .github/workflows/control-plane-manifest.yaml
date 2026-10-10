@@ -75,7 +75,7 @@ jobs:
             -e "manifest=${MANIFEST}"
 
   manifest_deployment:
-    if: "{{ github.ref_name == 'main' }}"
+    if: ${{ github.ref_name == 'main' }}
     name: Deploy manifest
     needs: manifest_validation
     runs-on:
