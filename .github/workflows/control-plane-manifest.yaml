@@ -69,7 +69,7 @@ jobs:
           MANIFEST: ${{ inputs.manifest }}
         run: |
           ansible-playbook \
-            -i ansible/env/${{ inputs.environment }}/inventory.yaml \
+            -i ansible/env/${{ inputs.environment }}/inventory.gcp.yaml \
             ansible/control_plane_manifests.yaml \
             --tags manifest_validation \
             -e "manifest=${MANIFEST}"
