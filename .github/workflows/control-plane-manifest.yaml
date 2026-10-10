@@ -1,5 +1,7 @@
 name: Deploy Kubernetes control plane manifest
 
+run-name: ${{ github.ref_name == 'main' && format('Deploy {0} manifest to control plane', inputs.manifest) || format('Validate {0} manifest', inputs.manifest) }}
+
 on:
   workflow_dispatch:
     inputs:
