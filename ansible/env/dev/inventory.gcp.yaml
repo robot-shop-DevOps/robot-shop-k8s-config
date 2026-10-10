@@ -3,6 +3,8 @@ plugin: google.cloud.gcp_compute
 projects:
   - robotshop-k8s-dev
 
+auth_kind: application
+
 filters:
   - status="RUNNING"
   - labels.role="control_plane"
