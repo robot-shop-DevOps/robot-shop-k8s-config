@@ -1,0 +1,157 @@
+- name: Require manifest to be specified
+  ansible.builtin.assert:
+    that:
+      - manifest is defined
+      - manifest | length > 0
+    fail_msg: >
+      You must specify the manifest to deploy.
+      Example:
+      -e manifest=kube-apiserver.yaml
+  tags:
+    - manifest_validation
+
+- name: Validate requested manifest
+  ansible.builtin.assert:
+    that:
+      - manifest in allowed_manifests
+    fail_msg: >
+      Invalid manifest '{{ manifest }}'.
+      Allowed values:
+      {{ allowed_manifests | join(', ') }}
+  tags:
+    - manifest_validation
+
+- name: Copy manifest to staging directory
+  ansible.builtin.copy:
+    src: "{{ manifest_source_dir }}/{{ manifest }}"
+    dest: "{{ manifest_stage_dir }}/{{ manifest }}"
+    owner: root
+    group: root
+    mode: "0600"
+  tags:
+    - manifest_validation
+
+- name: Validate manifest
+  ansible.builtin.command:
+    cmd: >
+      kubectl apply
+      --dry-run=client
+      -f "{{ manifest_stage_dir }}/{{ manifest }}"
+  changed_when: false
+  tags:
+    - manifest_validation
+
+- name: Deploy control-plane manifest
+  block:
+
+    - name: Backup current manifest
+      ansible.builtin.copy:
+        src: "{{ manifest_source_dir }}/{{ manifest }}"
+        dest: "{{ manifest_backup_dir }}/{{ manifest }}.backup"
+        owner: root
+        group: root
+        mode: "0600"
+      tags:
+        - manifest_deployment
+
+    - name: Deploy manifest
+      ansible.builtin.command:
+        cmd: >
+          mv "{{ manifest_stage_dir }}/{{ manifest }}"
+             "{{ manifest_source_dir }}/{{ manifest }}"
+      tags:
+        - manifest_deployment
+
+    - name: Verify kube-apiserver
+      ansible.builtin.command:
+        cmd: >
+          kubectl
+          --kubeconfig /etc/kubernetes/admin.conf
+          get --raw=/readyz
+      register: apiserver_ready
+      retries: 10
+      delay: 5
+      until:
+        - apiserver_ready.rc == 0
+        - apiserver_ready.stdout | trim == "ok"
+      changed_when: false
+      when: manifest == "kube-apiserver.yaml"
+      tags:
+        - manifest_deployment
+
+    - name: Verify etcd
+      ansible.builtin.command:
+        cmd: >
+          kubectl
+          --kubeconfig /etc/kubernetes/admin.conf
+          -n kube-system
+          get pod
+          -l component=etcd
+          -o jsonpath='{.items[0].status.containerStatuses[0].ready}'
+      register: etcd_ready
+      retries: 10
+      delay: 5
+      until:
+        - etcd_ready.stdout | trim == "true"
+      changed_when: false
+      when: manifest == "etcd.yaml"
+      tags:
+        - manifest_deployment
+
+    - name: Verify kube-controller-manager
+      ansible.builtin.command:
+        cmd: >
+          kubectl
+          --kubeconfig /etc/kubernetes/admin.conf
+          -n kube-system
+          get pod
+          -l component=kube-controller-manager
+          -o jsonpath='{.items[0].status.containerStatuses[0].ready}'
+      register: controller_manager_ready
+      retries: 10
+      delay: 5
+      until:
+        - controller_manager_ready.stdout | trim == "true"
+      changed_when: false
+      when: manifest == "kube-controller-manager.yaml"
+      tags:
+        - manifest_deployment
+
+    - name: Verify kube-scheduler
+      ansible.builtin.command:
+        cmd: >
+          kubectl
+          --kubeconfig /etc/kubernetes/admin.conf
+          -n kube-system
+          get pod
+          -l component=kube-scheduler
+          -o jsonpath='{.items[0].status.containerStatuses[0].ready}'
+      register: scheduler_ready
+      retries: 10
+      delay: 5
+      until:
+        - scheduler_ready.stdout | trim == "true"
+      changed_when: false
+      when: manifest == "kube-scheduler.yaml"
+      tags:
+        - manifest_deployment
+
+  rescue:
+
+    - name: Roll back manifest
+      ansible.builtin.copy:
+        src: "{{ manifest_backup_dir }}/{{ manifest }}.backup"
+        dest: "{{ manifest_source_dir }}/{{ manifest }}"
+        owner: root
+        group: root
+        mode: "0600"
+      tags:
+        - manifest_deployment
+
+    - name: Fail deployment
+      ansible.builtin.fail:
+        msg: >
+          Deployment of {{ manifest }} failed.
+          Previous manifest has been restored.
+      tags:
+        - manifest_deployment
