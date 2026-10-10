@@ -1,10 +1,18 @@
 name: Deploy Kubernetes control plane manifest
 
-run-name: ${{ github.ref_name == 'main' && format('Deploy {0} manifest to control plane', inputs.manifest) || format('Validate {0} manifest', inputs.manifest) }}
+run-name: ${{ github.ref_name == 'main' && format('Deploy {0} manifest to {1} control plane', inputs.manifest, inputs.environment) || format('Validate {0} manifest in {1}', inputs.manifest, inputs.environment) }}
 
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        description: "Environment to deploy the manifest"
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+
       manifest:
         description: "Control-plane manifest to deploy"
         required: true
@@ -61,8 +69,8 @@ jobs:
           MANIFEST: ${{ inputs.manifest }}
         run: |
           ansible-playbook \
-            -i inventory/gcp_compute.yaml \
-            playbooks/control_plane_manifests.yaml \
+            -i ansible/env/${{ inputs.environment }}/inventory.yaml \
+            ansible/control_plane_manifests.yaml \
             --tags manifest_validation \
             -e "manifest=${MANIFEST}"
 
@@ -74,7 +82,7 @@ jobs:
       labels: ${{ inputs.RUNNER_LABEL || 'self-hosted' }}
 
     environment:
-      name: robotshop-k8s-dev
+      name: ${{ inputs.environment }}
 
     steps:
       - name: Checkout repository
@@ -86,7 +94,7 @@ jobs:
         with:
           GCP_PROJECT: ${{ inputs.GCP_PROJECT }}
           WORKLOAD_IDENTITY_PROVIDER: ${{ env.WIF_PROVIDER }}
-          SERVICE_ACCOUNT: ${{ inputs.ANSIBLE_SERVICE_ACCOUNT }}
+          SERVICE_ACCOUNT: ${{ env.ANSIBLE_SERVICE_ACCOUNT }}
           TOKEN_FORMAT: access_token
 
       - name: Set up Python
@@ -105,7 +113,7 @@ jobs:
           MANIFEST: ${{ inputs.manifest }}
         run: |
           ansible-playbook \
-            -i inventory/gcp_compute.yaml \
-            playbooks/control_plane_manifests.yaml \
+            -i ansible/env/${{ inputs.environment }}/inventory.yaml \
+            ansible/control_plane_manifests.yaml \
             --tags manifest_deployment \
             -e "manifest=${MANIFEST}"
