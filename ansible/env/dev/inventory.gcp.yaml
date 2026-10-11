@@ -6,7 +6,6 @@ projects:
 auth_kind: application
 
 filters:
-  - status="RUNNING"
   - labels.role="control_plane"
 
 hostnames:
