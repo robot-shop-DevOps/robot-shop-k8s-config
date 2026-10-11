@@ -1,8 +1,2 @@
 ansible_user: "ansible"
-ansible_password: "{{ lookup(
-    'google.cloud.gcp_secret_manager', 
-    auth_kind='serviceaccount', 
-    service_account_file=lookup('env', 'GOOGLE_APPLICATION_CREDENTIALS'),
-    secret_id='ansible_password', 
-    project='robotshop-k8s-dev'
-  )}}"
+ansible_password: "{{ lookup('google.cloud.gcp_secret_manager', secret_id='ansible_password', project='robotshop-k8s-dev') }}"
