@@ -51,7 +51,7 @@ jobs:
           GCP_PROJECT: ${{ inputs.GCP_PROJECT }}
           WORKLOAD_IDENTITY_PROVIDER: ${{ env.WIF_PROVIDER }}
           SERVICE_ACCOUNT: ${{ env.ANSIBLE_SERVICE_ACCOUNT }}
-          TOKEN_FORMAT: access_token
+          create_credentials_file: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -96,7 +96,7 @@ jobs:
           GCP_PROJECT: ${{ inputs.GCP_PROJECT }}
           WORKLOAD_IDENTITY_PROVIDER: ${{ env.WIF_PROVIDER }}
           SERVICE_ACCOUNT: ${{ env.ANSIBLE_SERVICE_ACCOUNT }}
-          TOKEN_FORMAT: access_token
+          create_credentials_file: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
