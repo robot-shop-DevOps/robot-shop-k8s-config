@@ -64,23 +64,65 @@ jobs:
           python -m pip install ansible requests google-auth
           ansible-galaxy collection install google.cloud
 
-      - name: Fetch Ansible password
+      - name: Create temporary OS Login SSH credentials
         shell: bash
         run: |
-          echo "ANSIBLE_PASSWORD=$(gcloud secrets versions access latest \
-            --secret=ansible_password \
-            --project="$GCP_PROJECT_ID" \
-            --quiet)" >> "$GITHUB_ENV"
+          set -euo pipefail
+
+          SSH_DIR="$RUNNER_TEMP/robotshop-ssh"
+          SSH_KEY_PATH="$SSH_DIR/google_compute_engine"
+
+          mkdir -p "$SSH_DIR"
+          chmod 700 "$SSH_DIR"
+
+          ssh-keygen -t rsa -b 4096 -f "$SSH_KEY_PATH" -N "" -q
+
+          chmod 600 "$SSH_KEY_PATH"
+
+          gcloud compute os-login ssh-keys add \
+            --key-file="$SSH_KEY_PATH.pub" \
+            --ttl=2h
+
+          OS_LOGIN_USERNAME="$(gcloud compute os-login describe-profile \
+            --format='value(posixAccounts[0].username)')"
+
+          if [[ -z "$OS_LOGIN_USERNAME" ]]; then
+            echo "::error::Could not determine the OS Login username."
+            exit 1
+          fi
+
+          echo "OS_LOGIN_USERNAME=$OS_LOGIN_USERNAME" >> "$GITHUB_ENV"
+          echo "SSH_KEY_PATH=$SSH_KEY_PATH" >> "$GITHUB_ENV"
+
+          echo "Temporary SSH credentials created."
 
       - name: Validate selected manifest
         env:
           MANIFEST: ${{ inputs.manifest }}
         run: |
           ansible-playbook \
-            -i ansible/env/${{ inputs.environment }}/inventory.gcp.yaml \
+            -i "ansible/env/${{ inputs.environment }}/inventory.gcp.yaml" \
             ansible/control_plane_manifests.yaml \
             --tags manifest_validation \
-            -e "manifest=${MANIFEST}" \
+            --user "$OS_LOGIN_USERNAME" \
+            --private-key "$SSH_KEY_PATH" \
+            -e "manifest=$MANIFEST"
+
+      - name: Remove temporary OS Login SSH credentials
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          SSH_DIR="$RUNNER_TEMP/robotshop-ssh"
+          SSH_KEY_PATH="$SSH_DIR/google_compute_engine"
+
+          if [[ -f "$SSH_KEY_PATH.pub" ]]; then
+            gcloud compute os-login ssh-keys remove \
+              --key-file="$SSH_KEY_PATH.pub" \
+              --quiet || echo "::warning::Could not remove the temporary OS Login public key."
+          fi
+
+          rm -rf "$SSH_DIR"
+
 
   manifest_deployment:
     if: ${{ github.ref_name == 'main' }}
@@ -117,20 +159,61 @@ jobs:
           python -m pip install ansible requests google-auth
           ansible-galaxy collection install google.cloud
 
-      - name: Fetch Ansible password
+      - name: Create temporary OS Login SSH credentials
         shell: bash
         run: |
-          echo "ANSIBLE_PASSWORD=$(gcloud secrets versions access latest \
-            --secret=ansible_password \
-            --project="$GCP_PROJECT_ID" \
-            --quiet)" >> "$GITHUB_ENV"
+          set -euo pipefail
+
+          SSH_DIR="$RUNNER_TEMP/robotshop-ssh"
+          SSH_KEY_PATH="$SSH_DIR/google_compute_engine"
+
+          mkdir -p "$SSH_DIR"
+          chmod 700 "$SSH_DIR"
+
+          ssh-keygen -t rsa -b 4096 -f "$SSH_KEY_PATH" -N "" -q
+
+          chmod 600 "$SSH_KEY_PATH"
+
+          gcloud compute os-login ssh-keys add \
+            --key-file="$SSH_KEY_PATH.pub" \
+            --ttl=2h
+
+          OS_LOGIN_USERNAME="$(gcloud compute os-login describe-profile \
+            --format='value(posixAccounts[0].username)')"
+
+          if [[ -z "$OS_LOGIN_USERNAME" ]]; then
+            echo "::error::Could not determine the OS Login username."
+            exit 1
+          fi
+
+          echo "OS_LOGIN_USERNAME=$OS_LOGIN_USERNAME" >> "$GITHUB_ENV"
+          echo "SSH_KEY_PATH=$SSH_KEY_PATH" >> "$GITHUB_ENV"
+
+          echo "Temporary SSH credentials created."
 
       - name: Deploy selected manifest
         env:
           MANIFEST: ${{ inputs.manifest }}
         run: |
           ansible-playbook \
-            -i ansible/env/${{ inputs.environment }}/inventory.gcp.yaml \
+            -i "ansible/env/${{ inputs.environment }}/inventory.gcp.yaml" \
             ansible/control_plane_manifests.yaml \
             --tags manifest_deployment \
-            -e "manifest=${MANIFEST}" \
+            --user "$OS_LOGIN_USERNAME" \
+            --private-key "$SSH_KEY_PATH" \
+            -e "manifest=$MANIFEST"
+
+      - name: Remove temporary OS Login SSH credentials
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          SSH_DIR="$RUNNER_TEMP/robotshop-ssh"
+          SSH_KEY_PATH="$SSH_DIR/google_compute_engine"
+
+          if [[ -f "$SSH_KEY_PATH.pub" ]]; then
+            gcloud compute os-login ssh-keys remove \
+              --key-file="$SSH_KEY_PATH.pub" \
+              --quiet || echo "::warning::Could not remove the temporary OS Login public key."
+          fi
+
+          rm -rf "$SSH_DIR"
