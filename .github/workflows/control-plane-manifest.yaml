@@ -48,7 +48,7 @@ jobs:
         id: gcp_auth
         uses: robot-shop-DevOps/robot-shop-github-actions/.github/actions/gcp/wif-login@gcp
         with:
-          GCP_PROJECT: ${{ inputs.GCP_PROJECT }}
+          GCP_PROJECT: ${{ env.GCP_PROJECT_ID }}
           WORKLOAD_IDENTITY_PROVIDER: ${{ env.WIF_PROVIDER }}
           SERVICE_ACCOUNT: ${{ env.ANSIBLE_SERVICE_ACCOUNT }}
           create_credentials_file: true
@@ -64,6 +64,14 @@ jobs:
           python -m pip install ansible requests google-auth
           ansible-galaxy collection install google.cloud
 
+      - name: Fetch Ansible password
+        shell: bash
+        run: |
+          echo "ANSIBLE_PASSWORD=$(gcloud secrets versions access latest \
+            --secret=ansible_password \
+            --project="$GCP_PROJECT_ID" \
+            --quiet)" >> "$GITHUB_ENV"
+
       - name: Validate selected manifest
         env:
           MANIFEST: ${{ inputs.manifest }}
@@ -72,7 +80,7 @@ jobs:
             -i ansible/env/${{ inputs.environment }}/inventory.gcp.yaml \
             ansible/control_plane_manifests.yaml \
             --tags manifest_validation \
-            -e "manifest=${MANIFEST}"
+            -e "manifest=${MANIFEST}" \
 
   manifest_deployment:
     if: ${{ github.ref_name == 'main' }}
@@ -93,7 +101,7 @@ jobs:
         id: gcp_auth
         uses: robot-shop-DevOps/robot-shop-github-actions/.github/actions/gcp/wif-login@gcp
         with:
-          GCP_PROJECT: ${{ inputs.GCP_PROJECT }}
+          GCP_PROJECT: ${{ env.GCP_PROJECT_ID }}
           WORKLOAD_IDENTITY_PROVIDER: ${{ env.WIF_PROVIDER }}
           SERVICE_ACCOUNT: ${{ env.ANSIBLE_SERVICE_ACCOUNT }}
           create_credentials_file: true
@@ -109,6 +117,14 @@ jobs:
           python -m pip install ansible requests google-auth
           ansible-galaxy collection install google.cloud
 
+      - name: Fetch Ansible password
+        shell: bash
+        run: |
+          echo "ANSIBLE_PASSWORD=$(gcloud secrets versions access latest \
+            --secret=ansible_password \
+            --project="$GCP_PROJECT_ID" \
+            --quiet)" >> "$GITHUB_ENV"
+
       - name: Deploy selected manifest
         env:
           MANIFEST: ${{ inputs.manifest }}
@@ -117,4 +133,4 @@ jobs:
             -i ansible/env/${{ inputs.environment }}/inventory.gcp.yaml \
             ansible/control_plane_manifests.yaml \
             --tags manifest_deployment \
-            -e "manifest=${MANIFEST}"
+            -e "manifest=${MANIFEST}" \
