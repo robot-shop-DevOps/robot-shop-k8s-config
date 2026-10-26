@@ -66,6 +66,8 @@ jobs:
 
       - name: Create temporary OS Login SSH credentials
         shell: bash
+        env:
+          CLOUDSDK_CORE_ACCOUNT: ${{ env.ANSIBLE_SERVICE_ACCOUNT }}
         run: |
           set -euo pipefail
 
@@ -111,6 +113,8 @@ jobs:
       - name: Remove temporary OS Login SSH credentials
         if: ${{ always() }}
         shell: bash
+        env:
+          CLOUDSDK_CORE_ACCOUNT: ${{ env.ANSIBLE_SERVICE_ACCOUNT }}
         run: |
           SSH_DIR="$RUNNER_TEMP/robotshop-ssh"
           SSH_KEY_PATH="$SSH_DIR/google_compute_engine"
@@ -161,6 +165,8 @@ jobs:
 
       - name: Create temporary OS Login SSH credentials
         shell: bash
+        env:
+          CLOUDSDK_CORE_ACCOUNT: ${{ env.ANSIBLE_SERVICE_ACCOUNT }}
         run: |
           set -euo pipefail
 
@@ -206,6 +212,8 @@ jobs:
       - name: Remove temporary OS Login SSH credentials
         if: ${{ always() }}
         shell: bash
+        env:
+          CLOUDSDK_CORE_ACCOUNT: ${{ env.ANSIBLE_SERVICE_ACCOUNT }}
         run: |
           SSH_DIR="$RUNNER_TEMP/robotshop-ssh"
           SSH_KEY_PATH="$SSH_DIR/google_compute_engine"
