@@ -1,3 +1,2 @@
 ansible_user: "ansible"
 # ansible_password: "{{ lookup('google.cloud.gcp_secret_manager', secret_id='ansible_password', project='robotshop-k8s-dev') }}"
-ansible_password: "{{ lookup('ansible.builtin.env', 'ANSIBLE_PASSWORD') }}"
