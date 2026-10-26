@@ -101,6 +101,7 @@ jobs:
       - name: Validate selected manifest
         env:
           MANIFEST: ${{ inputs.manifest }}
+          ANSIBLE_SSH_COMMON_ARGS: "-o StrictHostKeyChecking=accept-new"
         run: |
           ansible-playbook \
             -i "ansible/env/${{ inputs.environment }}/inventory.gcp.yaml" \
@@ -200,6 +201,7 @@ jobs:
       - name: Deploy selected manifest
         env:
           MANIFEST: ${{ inputs.manifest }}
+          ANSIBLE_SSH_COMMON_ARGS: "-o StrictHostKeyChecking=accept-new"
         run: |
           ansible-playbook \
             -i "ansible/env/${{ inputs.environment }}/inventory.gcp.yaml" \
