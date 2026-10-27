@@ -71,15 +71,23 @@ jobs:
         run: |
           set -euo pipefail
 
-          SSH_DIR="$RUNNER_TEMP/robotshop-ssh"
-          SSH_KEY_PATH="$SSH_DIR/google_compute_engine"
-
-          mkdir -p "$SSH_DIR"
+          SSH_DIR="$(mktemp -d /tmp/robotshop-ssh.XXXXXX)"
           chmod 700 "$SSH_DIR"
 
-          ssh-keygen -t rsa -b 4096 -f "$SSH_KEY_PATH" -N "" -q
+          SSH_KEY_PATH="$SSH_DIR/google_compute_engine"
+
+          echo "SSH_DIR=$SSH_DIR" >> "$GITHUB_ENV"
+          echo "SSH_KEY_PATH=$SSH_KEY_PATH" >> "$GITHUB_ENV"
+
+          ssh-keygen \
+            -t rsa \
+            -b 4096 \
+            -f "$SSH_KEY_PATH" \
+            -N "" \
+            -q
 
           chmod 600 "$SSH_KEY_PATH"
+          chmod 644 "$SSH_KEY_PATH.pub"
 
           gcloud compute os-login ssh-keys add \
             --key-file="$SSH_KEY_PATH.pub" \
@@ -94,9 +102,8 @@ jobs:
           fi
 
           echo "OS_LOGIN_USERNAME=$OS_LOGIN_USERNAME" >> "$GITHUB_ENV"
-          echo "SSH_KEY_PATH=$SSH_KEY_PATH" >> "$GITHUB_ENV"
 
-          echo "Temporary SSH credentials created."
+          echo "Temporary SSH credentials created successfully."
 
       - name: Validate selected manifest
         env:
@@ -117,16 +124,17 @@ jobs:
         env:
           CLOUDSDK_CORE_ACCOUNT: ${{ env.ANSIBLE_SERVICE_ACCOUNT }}
         run: |
-          SSH_DIR="$RUNNER_TEMP/robotshop-ssh"
-          SSH_KEY_PATH="$SSH_DIR/google_compute_engine"
+          set -u
 
-          if [[ -f "$SSH_KEY_PATH.pub" ]]; then
-            gcloud compute os-login ssh-keys remove \
-              --key-file="$SSH_KEY_PATH.pub" \
+          if [[ -n "${SSH_DIR:-}" && -f "$SSH_DIR/google_compute_engine.pub" ]]; then
+            gcloud compute os-login ssh-keys remove 
+              --key-file="$SSH_DIR/google_compute_engine.pub" 
               --quiet || echo "::warning::Could not remove the temporary OS Login public key."
           fi
 
-          rm -rf "$SSH_DIR"
+          if [[ -n "${SSH_DIR:-}" && -d "$SSH_DIR" ]]; then
+            rm -rf -- "$SSH_DIR"
+          fi
 
 
   manifest_deployment:
@@ -171,15 +179,23 @@ jobs:
         run: |
           set -euo pipefail
 
-          SSH_DIR="$RUNNER_TEMP/robotshop-ssh"
-          SSH_KEY_PATH="$SSH_DIR/google_compute_engine"
-
-          mkdir -p "$SSH_DIR"
+          SSH_DIR="$(mktemp -d /tmp/robotshop-ssh.XXXXXX)"
           chmod 700 "$SSH_DIR"
 
-          ssh-keygen -t rsa -b 4096 -f "$SSH_KEY_PATH" -N "" -q
+          SSH_KEY_PATH="$SSH_DIR/google_compute_engine"
+
+          echo "SSH_DIR=$SSH_DIR" >> "$GITHUB_ENV"
+          echo "SSH_KEY_PATH=$SSH_KEY_PATH" >> "$GITHUB_ENV"
+
+          ssh-keygen \
+            -t rsa \
+            -b 4096 \
+            -f "$SSH_KEY_PATH" \
+            -N "" \
+            -q
 
           chmod 600 "$SSH_KEY_PATH"
+          chmod 644 "$SSH_KEY_PATH.pub"
 
           gcloud compute os-login ssh-keys add \
             --key-file="$SSH_KEY_PATH.pub" \
@@ -194,9 +210,8 @@ jobs:
           fi
 
           echo "OS_LOGIN_USERNAME=$OS_LOGIN_USERNAME" >> "$GITHUB_ENV"
-          echo "SSH_KEY_PATH=$SSH_KEY_PATH" >> "$GITHUB_ENV"
 
-          echo "Temporary SSH credentials created."
+          echo "Temporary SSH credentials created successfully."
 
       - name: Deploy selected manifest
         env:
@@ -217,13 +232,14 @@ jobs:
         env:
           CLOUDSDK_CORE_ACCOUNT: ${{ env.ANSIBLE_SERVICE_ACCOUNT }}
         run: |
-          SSH_DIR="$RUNNER_TEMP/robotshop-ssh"
-          SSH_KEY_PATH="$SSH_DIR/google_compute_engine"
+          set -u
 
-          if [[ -f "$SSH_KEY_PATH.pub" ]]; then
-            gcloud compute os-login ssh-keys remove \
-              --key-file="$SSH_KEY_PATH.pub" \
+          if [[ -n "${SSH_DIR:-}" && -f "$SSH_DIR/google_compute_engine.pub" ]]; then
+            gcloud compute os-login ssh-keys remove 
+              --key-file="$SSH_DIR/google_compute_engine.pub" 
               --quiet || echo "::warning::Could not remove the temporary OS Login public key."
           fi
 
-          rm -rf "$SSH_DIR"
+          if [[ -n "${SSH_DIR:-}" && -d "$SSH_DIR" ]]; then
+            rm -rf -- "$SSH_DIR"
+          fi
