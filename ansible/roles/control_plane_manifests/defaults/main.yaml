@@ -1,4 +1,4 @@
-manifest_source_dir: "../../../../control-plane/manifests"
+manifest_source_dir: "{{ playbook_dir }}/../control_plane/manifests"
 manifest_dest_dir: "/etc/kubernetes/manifests"
 manifest_backup_dir: "/etc/kubernetes/manifests-backup"
 manifest_stage_dir: "/etc/kubernetes/manifests-staging"
